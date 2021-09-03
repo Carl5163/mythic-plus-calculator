@@ -24,13 +24,16 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.renderer.NumberRenderer;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.PWA;
 
 
 
-@Route
+@PWA(name = "Mythic+ Calculator", shortName = "M+Calc", enableInstallPrompt = false)
+@PageTitle("Mythic+ Calculator")
+@Route(value = "")
 public class MainLayout extends VerticalLayout {
 
 	private final DungeonRepository repo;
@@ -54,9 +57,9 @@ public class MainLayout extends VerticalLayout {
 		this.editor = editor;
 
 		//TODO: Remove this
-		region.setValue("us");
-		realm.setValue("thunderlord");
-		name.setValue("gaulis");
+		region.setValue("US");
+		realm.setValue("Thunderlord");
+		name.setValue("Gaulis");
 		
 		
 		HorizontalLayout actions = new HorizontalLayout(region, realm, name);
