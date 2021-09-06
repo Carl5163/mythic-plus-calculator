@@ -21,6 +21,7 @@ import com.cwahler.application.repositories.DungeonRepository;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
@@ -58,6 +59,7 @@ public class MainLayout extends VerticalLayout {
 	private Button reloadButton;
 
 	VerticalLayout banner;
+	Image portrait;
 	
 	private static Logger logger = LoggerFactory.getLogger(MainLayout.class);
 
@@ -74,7 +76,8 @@ public class MainLayout extends VerticalLayout {
 		name.setValue("Gaulis");
 		
 		banner = new VerticalLayout();
-		HorizontalLayout actions = new HorizontalLayout(region, realm, name);
+		portrait = new Image();
+		HorizontalLayout actions = new HorizontalLayout(region, realm, name, portrait);
 		banner.add(actions);
 		add(banner);
 		
@@ -142,6 +145,7 @@ public class MainLayout extends VerticalLayout {
 			portraitUrl = (String) jo.get("thumbnail_url");
 			bannerUrl = bannerUrlBase + (String) jo.get("profile_banner") + ".jpg";
 			banner.getStyle().set("background", "url("+bannerUrl+")");
+			portrait.setSrc(portraitUrl);
 					
 			JSONArray dungArray = ((JSONArray)jo.get("mythic_plus_best_runs"));
 			@SuppressWarnings("unchecked")
