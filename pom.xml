@@ -170,6 +170,20 @@
     <build>
         <defaultGoal>spring-boot:run</defaultGoal>
         <plugins>
+        	<plugin>
+		        <groupId>com.heroku.sdk</groupId>
+		        <artifactId>heroku-maven-plugin</artifactId>
+		        <version>3.0.3</version>
+                <configuration>
+                	<includeTarget>false</includeTarget>
+					<includes>
+					  <include>target/${project.artifactId}-${project.version}.jar</include>
+					</includes>
+			        <processTypes>
+				    	<web>java $JAVA_OPTS -jar target/${project.artifactId}-${project.version}.jar</web>
+					</processTypes>
+                </configuration>
+	    	</plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
