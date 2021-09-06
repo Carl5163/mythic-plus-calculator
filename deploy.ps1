@@ -1,0 +1,1 @@
+Invoke-Expression "mvn clean package -Pproduction heroku:deploy"
