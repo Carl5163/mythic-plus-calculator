@@ -9,6 +9,8 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -28,12 +30,13 @@ import com.vaadin.flow.data.renderer.NumberRenderer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.PWA;
-
-
+import com.vaadin.flow.theme.Theme;
+import com.vaadin.flow.theme.lumo.Lumo;
 
 @PWA(name = "Mythic+ Calculator", shortName = "M+Calc", enableInstallPrompt = false)
 @PageTitle("Mythic+ Calculator")
 @Route(value = "")
+@Theme(value = Lumo.class, variant = Lumo.DARK)
 public class MainLayout extends VerticalLayout {
 
 	private final DungeonRepository repo;
@@ -46,10 +49,9 @@ public class MainLayout extends VerticalLayout {
 
 	private final DungeonEditor editor;
 	
-
 	private Button reloadButton;
 
-	// private final Button addNewBtn;
+	private static Logger logger = LoggerFactory.getLogger(MainLayout.class);
 
 	public MainLayout(DungeonRepository repo, DungeonEditor editor) {
 		this.repo = repo;
@@ -165,6 +167,7 @@ public class MainLayout extends VerticalLayout {
 			n.setPosition(Notification.Position.TOP_CENTER);
 			n.open();
 			e.printStackTrace();
+			logger.error(e.getLocalizedMessage());
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
