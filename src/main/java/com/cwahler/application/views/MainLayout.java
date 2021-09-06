@@ -19,6 +19,7 @@ import com.cwahler.application.editors.DungeonEditor;
 import com.cwahler.application.entities.Dungeon;
 import com.cwahler.application.repositories.DungeonRepository;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -42,38 +43,50 @@ public class MainLayout extends VerticalLayout {
 	private final DungeonRepository repo;
 
 	final Grid<Dungeon> grid;
+	
+	String bannerUrl;
+	String portraitUrl;
+	String bannerUrlBase = "https://cdnassets.raider.io/images/profile/masthead_backdrops/v2/";
 
 	TextField region = new TextField("Region");
 	TextField realm = new TextField("Realm");
 	TextField name = new TextField("Character Name");
 
+	private final Dialog editorDialog;
 	private final DungeonEditor editor;
 	
 	private Button reloadButton;
 
+	VerticalLayout banner;
+	
 	private static Logger logger = LoggerFactory.getLogger(MainLayout.class);
 
 	public MainLayout(DungeonRepository repo, DungeonEditor editor) {
 		this.repo = repo;
 		this.grid = new Grid<>(Dungeon.class);
 		this.editor = editor;
+		editorDialog = new Dialog();
+		editorDialog.add(editor);
 
 		//TODO: Remove this
 		region.setValue("US");
 		realm.setValue("Thunderlord");
 		name.setValue("Gaulis");
 		
-		
+		banner = new VerticalLayout();
 		HorizontalLayout actions = new HorizontalLayout(region, realm, name);
-		add(actions);
+		banner.add(actions);
+		add(banner);
 		
 		grid.asSingleSelect().addValueChangeListener(e -> {
+			editorDialog.open();
 			editor.editDungeon(e.getValue());
 		});
 		
 		editor.setChangeHandler((dungeon, affix, percentRemaining) -> {
 			updateDungeon(dungeon, affix, percentRemaining);
 			repo.save(dungeon);
+			editorDialog.close();
 			editor.setVisible(false);
 			listDungeons("");
 		});
@@ -87,10 +100,10 @@ public class MainLayout extends VerticalLayout {
 			getAltDungeons(region.getValue().trim(), realm.getValue().trim(), name.getValue().trim(), repo);
 			listDungeons("");
 		});
-		add(reloadButton);
+		banner.add(reloadButton);
 
 		// build layout
-		add(grid, editor);
+		add(grid);
 
 		grid.setColumns("name", "fortLevel", "tyranLevel");
 		grid.addColumn(new NumberRenderer<>(Dungeon::getFortScore, "%(,.1f", getLocale())).setHeader("Fortified Score");
@@ -123,7 +136,13 @@ public class MainLayout extends VerticalLayout {
 		RestTemplate restTemplate = new RestTemplate();
 
 		try {
+			
 			JSONObject jo = (JSONObject)(new JSONParser().parse(restTemplate.getForObject(uri, String.class)));
+
+			portraitUrl = (String) jo.get("thumbnail_url");
+			bannerUrl = bannerUrlBase + (String) jo.get("profile_banner") + ".jpg";
+			banner.getStyle().set("background", "url("+bannerUrl+")");
+					
 			JSONArray dungArray = ((JSONArray)jo.get("mythic_plus_best_runs"));
 			@SuppressWarnings("unchecked")
 			Iterator<JSONObject> itr = dungArray.iterator();
