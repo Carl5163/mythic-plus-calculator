@@ -1,1 +1,1 @@
-web: java -jar target/*.jar
+web: ls && ls target && java -jar target/*.jar
