@@ -31,6 +31,7 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.data.renderer.NumberRenderer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -126,7 +127,9 @@ public class MainLayout extends VerticalLayout {
 			}
 		});
 		
-		grid.setColumnReorderingAllowed(true);
+		grid.addComponentColumn(item -> createRemoveButton(grid, item))
+        .setHeader("Actions");
+		
 		// build layout
 		add(grid);
 
@@ -142,6 +145,17 @@ public class MainLayout extends VerticalLayout {
 		
 		// Initialize listing
 		listDungeons(null);
+	}
+	
+	private Button createRemoveButton(Grid<Dungeon> grid, Dungeon item) {
+	    @SuppressWarnings("unchecked")
+	    Button button = new Button(VaadinIcon.EDIT.create(), clickEvent -> {
+	        ListDataProvider<Dungeon> dataProvider = (ListDataProvider<Dungeon>) grid
+	                .getDataProvider();
+	        dataProvider.getItems().remove(item);
+	        dataProvider.refreshAll();
+	    });
+	    return button;
 	}
 	
 	public void getTotals() {
