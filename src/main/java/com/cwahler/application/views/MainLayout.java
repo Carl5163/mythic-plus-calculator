@@ -98,25 +98,32 @@ public class MainLayout extends VerticalLayout {
 
 		
 		banner = new VerticalLayout();
-		portrait = new Image();
+		portrait = new Image("https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/5ab19f85-6c25-4d8d-a4d5-9e8070c3164c/d7sd1ab-9411e123-5bb8-4077-aa51-4b93f3ce1ac6.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzVhYjE5Zjg1LTZjMjUtNGQ4ZC1hNGQ1LTllODA3MGMzMTY0Y1wvZDdzZDFhYi05NDExZTEyMy01YmI4LTQwNzctYWE1MS00YjkzZjNjZTFhYzYucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.XfeAR2CNe8JsSU2zUfcwP-85QRz5SormCKnuA3CMtpQ", "No Image");
 		portrait.setWidth(185, Unit.PIXELS);
 		portrait.setHeight(185, Unit.PIXELS);
-		portrait.setVisible(false);
 		VerticalLayout infoPanel = new VerticalLayout();
 		infoPanel.add(tName, tGuild, tRealm, tClass);
 		HorizontalLayout actions = new HorizontalLayout(portrait, infoPanel);
 		banner.add(actions, loadButton);
+		banner.getStyle().set("background", "url(https://images.squarespace-cdn.com/content/v1/5db856944658bf0045b81003/1587676647505-FPJJUJNL0E2RSSZV5ASX/banner2-01.jpg?format=2000w)");
+		banner.setSizeFull();
 		add(banner);
 		
 		grid.asSingleSelect().addValueChangeListener(e -> {
-			editor.open(e.getValue());
+			if(e != null) {
+				if(e.getValue() != null) {
+					editor.open(e.getValue());
+				}
+			}
 		});
 		
 		editor.setSaveHandler((dungeon, affix, percentRemaining) -> {
-			updateDungeon(dungeon, affix, percentRemaining);
-			repo.save(dungeon);
-			editor.close();
-			listDungeons("");
+			if(editor.isValid()) {
+				updateDungeon(dungeon, affix, percentRemaining);
+				repo.save(dungeon);
+				editor.close();
+				listDungeons("");
+			}
 		});
 		
 		grid.setColumnReorderingAllowed(true);

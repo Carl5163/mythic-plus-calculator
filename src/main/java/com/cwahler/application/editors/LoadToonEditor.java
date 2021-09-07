@@ -21,8 +21,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.ComponentEventListener;
-import com.vaadin.flow.component.HasValue.ValueChangeEvent;
-import com.vaadin.flow.component.HasValue.ValueChangeListener;
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.KeyNotifier;
 import com.vaadin.flow.component.button.Button;
@@ -69,6 +67,16 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 		region.setItems(REGIONS);
 		region.setValue("US");
 		realm.setItems(REALMS.get("US"));
+		realm.setValue("Thunderlord");
+		
+		region.addValueChangeListener(event -> {
+			if (event.getValue() == null) {
+		    } else {
+		    	realm.setItems(REALMS.get(region.getValue()));
+		    	realm.setValue(REALMS.get(region.getValue()).get(0));
+		    }
+		});
+		
 		
 		//TODO: Add value Changed listener
 		//TODO Get the load code out of the dialog so we only load once
@@ -96,11 +104,6 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
         });
 
         add(titleBar);
-
-		//TODO: Remove this
-		region.setValue("US");
-		realm.setValue("Thunderlord");
-		name.setValue("Gaulis");
 		
 
 		addKeyPressListener(Key.ENTER, e -> loadButton.click());
@@ -137,7 +140,6 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 		JSONObject response;
 		response = (JSONObject)(new JSONParser().parse(restTemplate.exchange(myUri, HttpMethod.POST, request, String.class).getBody()));
 		String token = (String) response.get("access_token");
-		logger.info("TOKEN = " + token);
 		
 
 		for(String reg : REGIONS) {
@@ -154,7 +156,6 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 			        .queryParam("access_token", token)
 			        .queryParam("namespace","dynamic-"+lowerReg);
 			myUri = builder.buildAndExpand().toUri();
-			logger.info(myUri.toString());
 			response = (JSONObject)(new JSONParser().parse(restTemplate.exchange(myUri, HttpMethod.GET, request, String.class).getBody()));
 			JSONArray realmArray = ((JSONArray)response.get("realms"));
 			Iterator<JSONObject> itr = realmArray.iterator();
@@ -163,7 +164,12 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 			while(itr.hasNext()) {
 				JSONObject rjson = itr.next();
 				String rName = (String)rjson.get("name");
-				regionList.add(rName);
+				if(rName == null) {
+					rName = (String)rjson.get("slug");
+				}
+				if(rName != null) {
+					regionList.add(rName);
+				}
 			}
 			REALMS.put(reg, regionList);
 		}

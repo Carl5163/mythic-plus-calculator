@@ -16,8 +16,11 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.radiobutton.RadioGroupVariant;
+import com.vaadin.flow.component.textfield.IntegerField;
+import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.data.binder.Validator;
 import com.vaadin.flow.data.converter.StringToDoubleConverter;
 import com.vaadin.flow.data.converter.StringToIntegerConverter;
 
@@ -31,9 +34,9 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 	private Dungeon dungeon;
 
 	/* Fields to edit properties in Dungeon entity */
-	TextField fortLevel = new TextField("fortLevel");
-	TextField tyranLevel = new TextField("tyranLevel");
-	TextField percentRemaining = new TextField("percentRemaining");
+	IntegerField fortLevel = new IntegerField("fortLevel");
+	IntegerField tyranLevel = new IntegerField("tyranLevel");
+	NumberField percentRemaining = new NumberField("percentRemaining");
 
 	RadioButtonGroup<String> rbg = new RadioButtonGroup<String>();
 	
@@ -74,12 +77,12 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
                 close();
         });
         add(titleBar);
-		
+        
 		this.repository = repository;
 		layout.setWidth(this.getMaxWidth());
 		Span pRem = new Span("Percentage Remaining (Negative for Overtime, Positive for Undertime)");
 		percentRemaining.setLabel("");
-		percentRemaining.setValue("0");
+		percentRemaining.setValue(0d);
 		
 
 		rbg.setLabel("Affix");
@@ -100,23 +103,49 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 		tyranLevel.setLabel("Tyranical Level");
 		tyranLevel.setVisible(false);
 		
+		fortLevel.setHasControls(true);
+		fortLevel.setMin(2);
+		fortLevel.addValueChangeListener(e -> {
+			if(fortLevel.isInvalid()) {
+				save.setEnabled(false);
+			}
+		});
+		tyranLevel.setHasControls(true);
+		tyranLevel.setMin(2);
+		tyranLevel.addValueChangeListener(e -> {
+			if(tyranLevel.isInvalid()) {
+				save.setEnabled(false);
+			}
+		});
+		percentRemaining.setHasControls(true);
+		percentRemaining.setMin(-45);
+		percentRemaining.setMax(45);
+		percentRemaining.setStep(0.5d);
+		percentRemaining.addValueChangeListener(e -> {
+			if(percentRemaining.isInvalid()) {
+				save.setEnabled(false);
+			}
+		});
+		
 		layout.add(fortLevel, tyranLevel, rbg, pRem, percentRemaining, actions);
 
 
 		binder.forField ( this.fortLevel )
-        .withNullRepresentation ( "" )
-        .withConverter ( new StringToIntegerConverter ( Integer.valueOf ( 0 ), "integers only" ) )
+		.withValidator(num -> this.fortLevel.getValue() >= 2, "Key level must be greater than 2.")
         .bind ( Dungeon::getFortLevel, Dungeon::setFortLevel );
+		
 		binder.forField ( this.tyranLevel )
-        .withNullRepresentation ( "" )
-        .withConverter ( new StringToIntegerConverter ( Integer.valueOf ( 0 ), "integers only" ) )
+		.withValidator(num -> this.tyranLevel.getValue() >= 2, "Key level must be greater than 2.")
         .bind ( Dungeon::getTyranLevel, Dungeon::setTyranLevel );
+		
 		binder.forField ( this.percentRemaining )
-        .withNullRepresentation ( "" )
-        .withConverter ( new StringToDoubleConverter ( Double.valueOf ( 0 ), "doubles only" ) )
+		.withValidator(num -> this.percentRemaining.getValue() >= -45 && this.percentRemaining.getValue() <= 45, "Percent remaining must be between -45% and 45%.")
         .bind ( Dungeon::getPercentRemaining, Dungeon::setPercentRemaining );
+		
+		
 		// bind using naming convention
 		binder.bindInstanceFields(this);
+		
 
 		save.getElement().getThemeList().add("primary");
 
@@ -129,6 +158,19 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 		cancel.addClickListener(e -> close());
 	}
 	
+	public boolean isValid() {
+		if(fortLevel.isInvalid()) {
+			return false;
+		}
+		if(tyranLevel.isInvalid() ) {
+			return false;
+		}
+		if(percentRemaining.isInvalid()) {
+			return false;
+		}
+		return true;
+	}
+	
 	public void open(Dungeon d) {
 		titleSpan.setText("Edit Dungeon - " + d.getName());
 		editDungeon(d);
@@ -138,7 +180,7 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 
 	void save() {
 		repository.save(dungeon);
-		changeHandler.onSave(dungeon, rbg.getValue(), Double.parseDouble(percentRemaining.getValue()));
+		changeHandler.onSave(dungeon, rbg.getValue(), percentRemaining.getValue());
 	}
 
 	public interface ChangeHandler {
