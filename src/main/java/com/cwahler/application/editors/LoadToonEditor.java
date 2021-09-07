@@ -1,11 +1,9 @@
 package com.cwahler.application.editors;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import org.json.simple.JSONArray;
@@ -17,14 +15,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import com.cwahler.application.views.MainLayout;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.ComponentEventListener;
+import com.vaadin.flow.component.HasValue.ValueChangeEvent;
+import com.vaadin.flow.component.HasValue.ValueChangeListener;
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.KeyNotifier;
 import com.vaadin.flow.component.button.Button;
@@ -48,7 +46,7 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 			"KR",
 			"TW"
 	};
-	private static Map<String, String> REALMS = new HashMap<String, String>();
+	private static Map<String, ArrayList<String>> REALMS = new HashMap<String, ArrayList<String>>();
 
 	private ComboBox<String> region = new ComboBox<String>("Region");
 	private ComboBox<String> realm = new ComboBox<String>("Realm");
@@ -58,18 +56,22 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 	private Button cancelButton;
 	
 	public LoadToonEditor() {
-		region.setItems(REGIONS);
-		realm.setItems(REGIONS);
 		
 		try {
 			getAuthToken();
 		} catch (RestClientException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		} catch (ParseException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
+		
+
+		region.setItems(REGIONS);
+		region.setValue("US");
+		realm.setItems(REALMS.get("US"));
+		
+		//TODO: Add value Changed listener
+		//TODO Get the load code out of the dialog so we only load once
 
 		Div titleBar = new Div();
         Span titleSpan = new Span("Load Character");
@@ -156,11 +158,14 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 			response = (JSONObject)(new JSONParser().parse(restTemplate.exchange(myUri, HttpMethod.GET, request, String.class).getBody()));
 			JSONArray realmArray = ((JSONArray)response.get("realms"));
 			Iterator<JSONObject> itr = realmArray.iterator();
+			
+			ArrayList<String> regionList = new ArrayList<String>();
 			while(itr.hasNext()) {
-				JSONObject rjson = (JSONObject) itr.next();
+				JSONObject rjson = itr.next();
 				String rName = (String)rjson.get("name");
-				REALMS.put(reg, rName);
+				regionList.add(rName);
 			}
+			REALMS.put(reg, regionList);
 		}
 	}
 	
