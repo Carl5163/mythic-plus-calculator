@@ -7,7 +7,10 @@ import com.cwahler.application.repositories.DungeonRepository;
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.KeyNotifier;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -17,20 +20,8 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.converter.StringToDoubleConverter;
 import com.vaadin.flow.data.converter.StringToIntegerConverter;
-import com.vaadin.flow.spring.annotation.SpringComponent;
-import com.vaadin.flow.spring.annotation.UIScope;
 
-/**
- * A simple example to introduce building forms. As your real application is probably much
- * more complicated than this example, you could re-use this form in multiple places. This
- * example component is only used in MainView.
- * <p>
- * In a real world application you'll most likely using a common super class for all your
- * forms - less code, better UX.
- */
-@SpringComponent
-@UIScope
-public class DungeonEditor extends VerticalLayout implements KeyNotifier {
+public class DungeonEditor extends Dialog implements KeyNotifier {
 
 	private final DungeonRepository repository;
 
@@ -47,20 +38,46 @@ public class DungeonEditor extends VerticalLayout implements KeyNotifier {
 	RadioButtonGroup<String> rbg = new RadioButtonGroup<String>();
 	
 	/* Action buttons */
-	// TODO why more code?
+	
 	Button save = new Button("Save", VaadinIcon.CHECK.create());
 	Button cancel = new Button("Cancel");
 	HorizontalLayout actions = new HorizontalLayout(save, cancel);
-	
+	Span titleSpan;
 
 	Binder<Dungeon> binder = new Binder<>(Dungeon.class);
 	private ChangeHandler changeHandler;
 	
 	@Autowired
 	public DungeonEditor(DungeonRepository repository) {
+		
+		VerticalLayout layout = new VerticalLayout();
+		
+		Div titleBar = new Div();
+        titleSpan = new Span("Edit Dungeon - ");
+        titleSpan.getStyle().set("margin-left", "10px");
+        titleBar.add(titleSpan);
+        titleBar.getStyle().set("background", "#196cda");
+        titleBar.getStyle().set("margin-left", "-24px");
+        titleBar.getStyle().set("margin-bottom", "18px");
+        titleBar.getStyle().set("width", "calc(100% + 48px)");
+        titleBar.getStyle().set("margin-top", "-24px");
+        titleBar.getStyle().set("color", "white");
+
+        Icon i = new Icon(VaadinIcon.CLOSE);
+        i.getElement().getStyle().set("float", "right");
+        i.getElement().getStyle().set("width", "16px");
+        i.getElement().getStyle().set("margin-right", "5px");
+        i.getElement().getStyle().set("cursor", "pointer");
+        
+        titleBar.add(i);
+        i.addClickListener(listener -> {
+                close();
+        });
+        add(titleBar);
+		
 		this.repository = repository;
-		this.setWidth(this.getMaxWidth());
-		Span pRem = new Span("Percentage(%) Remaining (Negative for Overtime, Positive for Undertime)");
+		layout.setWidth(this.getMaxWidth());
+		Span pRem = new Span("Percentage Remaining (Negative for Overtime, Positive for Undertime)");
 		percentRemaining.setLabel("");
 		percentRemaining.setValue("0");
 		
@@ -83,7 +100,7 @@ public class DungeonEditor extends VerticalLayout implements KeyNotifier {
 		tyranLevel.setLabel("Tyranical Level");
 		tyranLevel.setVisible(false);
 		
-		add(fortLevel, tyranLevel, rbg, pRem, percentRemaining, actions);
+		layout.add(fortLevel, tyranLevel, rbg, pRem, percentRemaining, actions);
 
 
 		binder.forField ( this.fortLevel )
@@ -101,51 +118,39 @@ public class DungeonEditor extends VerticalLayout implements KeyNotifier {
 		// bind using naming convention
 		binder.bindInstanceFields(this);
 
-		// Configure and style components
-		setSpacing(true);
-
 		save.getElement().getThemeList().add("primary");
 
 		addKeyPressListener(Key.ENTER, e -> save());
 
-		// wire action buttons to save, delete and reset
+		add(layout);
+		
+		// wire action buttons to save, delete
 		save.addClickListener(e -> save());
-		cancel.addClickListener(e -> editDungeon(dungeon));
-		setVisible(false);
+		cancel.addClickListener(e -> close());
 	}
 	
-	@Override
-	public
-	void setVisible(boolean visible) {
-		if(visible) {
-			rbg.setValue("Fortified");
-		}
-		super.setVisible(visible);
+	public void open(Dungeon d) {
+		titleSpan.setText("Edit Dungeon - " + d.getName());
+		editDungeon(d);
+		rbg.setValue("Fortified");
+		super.open();
 	}
 
 	void save() {
 		repository.save(dungeon);
-		changeHandler.onChange(dungeon, rbg.getValue(), Double.parseDouble(percentRemaining.getValue()));
+		changeHandler.onSave(dungeon, rbg.getValue(), Double.parseDouble(percentRemaining.getValue()));
 	}
 
 	public interface ChangeHandler {
-		void onChange(Dungeon dungeon, String affix, Double percent);
+		void onSave(Dungeon dungeon, String affix, Double percent);
 	}
 
 	public final void editDungeon(Dungeon c) {
 		if (c == null) {
-			setVisible(false);
+			close();
 			return;
 		}
-		final boolean persisted = c.getId() != null;
-		if (persisted) {
-			// Find fresh entity for editing
-			dungeon = repository.findById(c.getId()).get();
-		}
-		else {
 			dungeon = c;
-		}
-		cancel.setVisible(persisted);
 
 		// Bind dungeon properties to similarly named fields
 		// Could also use annotation or "manual binding" or programmatically
@@ -153,13 +158,11 @@ public class DungeonEditor extends VerticalLayout implements KeyNotifier {
 		
 		binder.setBean(dungeon);
 
-		setVisible(true);
-
 		// Focus first name initially
 		fortLevel.focus();
 	}
 
-	public void setChangeHandler(ChangeHandler h) {
+	public void setSaveHandler(ChangeHandler h) {
 		// ChangeHandler is notified when either save or delete
 		// is clicked
 		changeHandler = h;

@@ -16,18 +16,21 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.cwahler.application.editors.DungeonEditor;
+import com.cwahler.application.editors.LoadToonEditor;
 import com.cwahler.application.entities.Dungeon;
 import com.cwahler.application.repositories.DungeonRepository;
+import com.vaadin.flow.component.Unit;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.Grid.Column;
 import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.renderer.NumberRenderer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -49,83 +52,122 @@ public class MainLayout extends VerticalLayout {
 	String portraitUrl;
 	String bannerUrlBase = "https://cdnassets.raider.io/images/profile/masthead_backdrops/v2/";
 
-	TextField region = new TextField("Region");
-	TextField realm = new TextField("Realm");
-	TextField name = new TextField("Character Name");
-
-	private final Dialog editorDialog;
 	private final DungeonEditor editor;
 	
-	private Button reloadButton;
+	private LoadToonEditor loadEditor;
+	private Button loadButton;
 
 	VerticalLayout banner;
 	Image portrait;
+	Label tName = new Label(""), tGuild = new Label(""), tRealm = new Label(""), tClass = new Label("");
+	
+	Column<Dungeon> tyranLevel;
+	Column<Dungeon>  fortLevel;
+	Column<Dungeon>  fortScore;
+	Column<Dungeon>  tyranScore;
+	Column<Dungeon>  totalScore;
+	
+	List<Dungeon> dungeonList;
 	
 	private static Logger logger = LoggerFactory.getLogger(MainLayout.class);
 
-	public MainLayout(DungeonRepository repo, DungeonEditor editor) {
+	public MainLayout(DungeonRepository repo) {
+		
 		this.repo = repo;
 		this.grid = new Grid<>(Dungeon.class);
-		this.editor = editor;
-		editorDialog = new Dialog();
-		editorDialog.add(editor);
+		dungeonList = new ArrayList<Dungeon>();
+		
+		editor = new DungeonEditor(this.repo);
 
-		//TODO: Remove this
-		region.setValue("US");
-		realm.setValue("Thunderlord");
-		name.setValue("Gaulis");
+		loadButton = new Button("Load Character", VaadinIcon.CLOUD_DOWNLOAD.create());
+		loadButton.addClickListener(e -> {
+			loadEditor.open();
+		});
+		
+		loadEditor = new LoadToonEditor();
+		loadEditor.addOnLoadListener(e -> {
+			List<Dungeon> dungeons = getBestDungeons(loadEditor.getRegion(), loadEditor.getRealm(), loadEditor.getName());
+			
+			if(dungeons != null) {
+				repo.deleteAll();
+				repo.saveAll(dungeons);
+				getAltDungeons(loadEditor.getRegion(), loadEditor.getRealm(), loadEditor.getName(), repo);
+				listDungeons("");
+			}
+		});
+
 		
 		banner = new VerticalLayout();
 		portrait = new Image();
-		HorizontalLayout actions = new HorizontalLayout(region, realm, name, portrait);
-		banner.add(actions);
+		portrait.setWidth(185, Unit.PIXELS);
+		portrait.setHeight(185, Unit.PIXELS);
+		portrait.setVisible(false);
+		VerticalLayout infoPanel = new VerticalLayout();
+		infoPanel.add(tName, tGuild, tRealm, tClass);
+		HorizontalLayout actions = new HorizontalLayout(portrait, infoPanel);
+		banner.add(actions, loadButton);
 		add(banner);
 		
 		grid.asSingleSelect().addValueChangeListener(e -> {
-			editorDialog.open();
-			editor.editDungeon(e.getValue());
+			editor.open(e.getValue());
 		});
 		
-		editor.setChangeHandler((dungeon, affix, percentRemaining) -> {
+		editor.setSaveHandler((dungeon, affix, percentRemaining) -> {
 			updateDungeon(dungeon, affix, percentRemaining);
 			repo.save(dungeon);
-			editorDialog.close();
-			editor.setVisible(false);
+			editor.close();
 			listDungeons("");
 		});
 		
-
-		this.reloadButton = new Button("Load Actual Scores", VaadinIcon.REFRESH.create());
-		reloadButton.addClickListener(e -> {
-			// save a couple of dungeons
-			repo.deleteAll();
-			repo.saveAll(getBestDungeons(region.getValue().trim(), realm.getValue().trim(), name.getValue().trim()));
-			getAltDungeons(region.getValue().trim(), realm.getValue().trim(), name.getValue().trim(), repo);
-			listDungeons("");
-		});
-		banner.add(reloadButton);
-
+		grid.setColumnReorderingAllowed(true);
 		// build layout
 		add(grid);
 
-		grid.setColumns("name", "fortLevel", "tyranLevel");
-		grid.addColumn(new NumberRenderer<>(Dungeon::getFortScore, "%(,.1f", getLocale())).setHeader("Fortified Score");
-		grid.addColumn(new NumberRenderer<>(Dungeon::getTyranScore, "%(,.1f", getLocale())).setHeader("Tyranical Score");
-		grid.addColumn(new NumberRenderer<>(Dungeon::getTotalScore, "%(,.1f", getLocale())).setHeader("Total Score");
-//		grid.addColumn(new NumberRenderer<>(Dungeon::getPercentRemaining, "%.1f%%", getLocale())).setHeader("Percent Remaining");
-
+		grid.setColumns("name");
+		tyranLevel = grid.addColumn("tyranLevel").setHeader("Tyranical Level");
+		fortLevel = grid.addColumn("fortLevel").setHeader("Fortified Level");
+		fortScore = grid.addColumn(new NumberRenderer<>(Dungeon::getFortScore, "%(,.1f", getLocale())).setHeader("Fortified Score");
+		tyranScore = grid.addColumn(new NumberRenderer<>(Dungeon::getTyranScore, "%(,.1f", getLocale())).setHeader("Tyranical Score");
+		totalScore = grid.addColumn(new NumberRenderer<>(Dungeon::getTotalScore, "%(,.1f", getLocale())).setHeader("Total Score");
+		fortScore.setFooter("Total Fortified: " + String.format("%1$,.1f", 0d));
+		tyranScore.setFooter("Total Tyranical: " + String.format("%1$,.1f", 0d));
+		totalScore.setFooter("Total Overall: " + String.format("%1$,.1f", 0d));
+		
 		// Initialize listing
 		listDungeons(null);
 	}
-
+	
+	public void getTotals() {
+		double total = 0;
+		double totalFort = 0;
+		double totalTyran = 0;
+		double averageFort = 0;
+		double averageTyran = 0;
+		for(Dungeon d : dungeonList) {
+			total += d.getTotalScore();
+			totalFort += d.getFortScore();
+			totalTyran += d.getTyranScore();
+			averageFort += d.getFortLevel();
+			averageTyran += d.getTyranLevel();
+		}
+		fortLevel.setFooter("Average Fortified: " + String.format("%1$,.1f", averageFort/8d));
+		tyranLevel.setFooter("Average Tyranical: " + String.format("%1$,.1f", averageTyran/8d));
+		fortScore.setFooter("Total Fortified: " + String.format("%1$,.1f", totalFort));
+		tyranScore.setFooter("Total Tyranical: " + String.format("%1$,.1f", totalTyran));
+		totalScore.setFooter("Total Overall: " + String.format("%1$,.1f", total));
+	}
+	
 	// tag::listDungeons[]
 	void listDungeons(String filterText) {
 		if (!StringUtils.hasLength(filterText)) {
-			grid.setItems(repo.findAll());
+			dungeonList = repo.findAll();
+			grid.setItems(dungeonList);
 		}
 		else {
-			grid.setItems(repo.findByNameStartsWithIgnoreCase(filterText));
+			dungeonList = repo.findByNameStartsWithIgnoreCase(filterText);
+			grid.setItems(dungeonList);
 		}
+		getTotals();
 	}
 	// end::listDungeons[]
 
@@ -135,17 +177,27 @@ public class MainLayout extends VerticalLayout {
 	
 	private List<Dungeon> getBestDungeons(String region, String realm, String name) {
 		List<Dungeon> dungeons = new ArrayList<Dungeon>();
-		final String uri = "https://raider.io/api/v1/characters/profile?region=" + region + "&realm=" + realm + "&name=" + name + "&fields=mythic_plus_best_runs";
+		final String dungeonUri = "https://raider.io/api/v1/characters/profile?region=" + region + "&realm=" + realm + "&name=" + name + "&fields=mythic_plus_best_runs";
+		final String guildUri = "https://raider.io/api/v1/characters/profile?region=" + region + "&realm=" + realm + "&name=" + name + "&fields=guild";
 		RestTemplate restTemplate = new RestTemplate();
 
 		try {
+			JSONObject jo = (JSONObject)(new JSONParser().parse(restTemplate.getForObject(dungeonUri, String.class)));
+			JSONObject guildJO = (JSONObject)(new JSONParser().parse(restTemplate.getForObject(guildUri, String.class)));
 			
-			JSONObject jo = (JSONObject)(new JSONParser().parse(restTemplate.getForObject(uri, String.class)));
+			JSONObject guildObject = (JSONObject)guildJO.get("guild");
+			
 
 			portraitUrl = (String) jo.get("thumbnail_url");
 			bannerUrl = bannerUrlBase + (String) jo.get("profile_banner") + ".jpg";
 			banner.getStyle().set("background", "url("+bannerUrl+")");
 			portrait.setSrc(portraitUrl);
+			portrait.setVisible(true);
+
+			tName.setText((String) jo.get("name"));
+			tGuild.setText("<" + (String) guildObject.get("name")+ ">");
+			tRealm.setText("(" + ((String) jo.get("region")).toUpperCase() + ")" + (String) jo.get("realm"));
+			tClass.setText((String) jo.get("race") + " " + (String) jo.get("active_spec_name") + " " + (String) jo.get("class"));
 					
 			JSONArray dungArray = ((JSONArray)jo.get("mythic_plus_best_runs"));
 			@SuppressWarnings("unchecked")
@@ -191,8 +243,10 @@ public class MainLayout extends VerticalLayout {
 			n.open();
 			e.printStackTrace();
 			logger.error(e.getLocalizedMessage());
+			return null;
 		} catch (ParseException e) {
 			e.printStackTrace();
+			return null;
 		}
 
 
@@ -226,7 +280,14 @@ public class MainLayout extends VerticalLayout {
 				}
 			}
 		} catch (RestClientException e) {
+			Span s = new Span("Lookup Failed");
+			Notification n = new Notification(s);
+			n.getElement().getThemeList().add("error");
+			n.setDuration(2000);
+			n.setPosition(Notification.Position.TOP_CENTER);
+			n.open();
 			e.printStackTrace();
+			logger.error(e.getLocalizedMessage());
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}

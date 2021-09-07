@@ -2,6 +2,8 @@
 # Created by https://www.toptal.com/developers/gitignore/api/java,node,visualstudiocode,eclipse,vaadin,gradle,maven
 # Edit at https://www.toptal.com/developers/gitignore?templates=java,node,visualstudiocode,eclipse,vaadin,gradle,maven
 
+webpack.generated.js
+
 # compiled output
 /dist
 /tmp
