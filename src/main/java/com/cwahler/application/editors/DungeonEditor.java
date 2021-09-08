@@ -86,7 +86,7 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 		
 
 		rbg.setLabel("Affix");
-		rbg.setItems("Fortified", "Tyranical");
+		rbg.setItems("Fortified", "Tyrannical ");
 		rbg.addThemeVariants(RadioGroupVariant.LUMO_VERTICAL);
 		rbg.setValue("Fortified");
 		rbg.addValueChangeListener(event -> {
@@ -100,7 +100,7 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 		});
 		
 		fortLevel.setLabel("Fortified Level");
-		tyranLevel.setLabel("Tyranical Level");
+		tyranLevel.setLabel("Tyrannical  Level");
 		tyranLevel.setVisible(false);
 		
 		fortLevel.setHasControls(true);
@@ -131,11 +131,11 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 
 
 		binder.forField ( this.fortLevel )
-		.withValidator(num -> this.fortLevel.getValue() >= 2, "Key level must be greater than 2.")
+		.withValidator(num -> this.fortLevel.getValue() >= 2 && this.fortLevel.getValue() <= 30, "Key level must be between 2 and 30.")
         .bind ( Dungeon::getFortLevel, Dungeon::setFortLevel );
 		
 		binder.forField ( this.tyranLevel )
-		.withValidator(num -> this.tyranLevel.getValue() >= 2, "Key level must be greater than 2.")
+		.withValidator(num -> this.tyranLevel.getValue() >= 2 && this.tyranLevel.getValue() <= 30, "Key level must be between 2 and 30.")
         .bind ( Dungeon::getTyranLevel, Dungeon::setTyranLevel );
 		
 		binder.forField ( this.percentRemaining )
@@ -148,8 +148,7 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 		
 
 		save.getElement().getThemeList().add("primary");
-
-		addKeyPressListener(Key.ENTER, e -> save());
+		save.addClickShortcut(Key.ENTER);
 
 		add(layout);
 		

@@ -68,6 +68,11 @@ public class MainLayout extends VerticalLayout {
 	Column<Dungeon>  tyranScore;
 	Column<Dungeon>  totalScore;
 	
+	String toonName;
+	String toonRegion;
+	String toonServer;
+	
+	
 	List<Dungeon> dungeonList;
 	
 	private static Logger logger = LoggerFactory.getLogger(MainLayout.class);
@@ -87,14 +92,7 @@ public class MainLayout extends VerticalLayout {
 		
 		loadEditor = new LoadToonEditor();
 		loadEditor.addOnLoadListener(e -> {
-			List<Dungeon> dungeons = getBestDungeons(loadEditor.getRegion(), loadEditor.getRealm(), loadEditor.getName());
-			
-			if(dungeons != null) {
-				repo.deleteAll();
-				repo.saveAll(dungeons);
-				getAltDungeons(loadEditor.getRegion(), loadEditor.getRealm(), loadEditor.getName(), repo);
-				listDungeons("");
-			}
+			loadAll();
 		});
 
 		
@@ -110,13 +108,6 @@ public class MainLayout extends VerticalLayout {
 		banner.setSizeFull();
 		add(banner);
 		
-		grid.asSingleSelect().addValueChangeListener(e -> {
-			if(e != null) {
-				if(e.getValue() != null) {
-					editor.open(e.getValue());
-				}
-			}
-		});
 		
 		editor.setSaveHandler((dungeon, affix, percentRemaining) -> {
 			if(editor.isValid()) {
@@ -127,33 +118,69 @@ public class MainLayout extends VerticalLayout {
 			}
 		});
 		
-		grid.addComponentColumn(item -> createRemoveButton(grid, item))
-        .setHeader("Actions");
 		
 		// build layout
+		grid.setHeightByRows(true);
 		add(grid);
 
 		grid.setColumns("name");
-		tyranLevel = grid.addColumn("tyranLevel").setHeader("Tyranical Level");
+		tyranLevel = grid.addColumn("tyranLevel").setHeader("Tyrannical  Level");
 		fortLevel = grid.addColumn("fortLevel").setHeader("Fortified Level");
 		fortScore = grid.addColumn(new NumberRenderer<>(Dungeon::getFortScore, "%(,.1f", getLocale())).setHeader("Fortified Score");
-		tyranScore = grid.addColumn(new NumberRenderer<>(Dungeon::getTyranScore, "%(,.1f", getLocale())).setHeader("Tyranical Score");
+		tyranScore = grid.addColumn(new NumberRenderer<>(Dungeon::getTyranScore, "%(,.1f", getLocale())).setHeader("Tyrannical  Score");
 		totalScore = grid.addColumn(new NumberRenderer<>(Dungeon::getTotalScore, "%(,.1f", getLocale())).setHeader("Total Score");
 		fortScore.setFooter("Total Fortified: " + String.format("%1$,.1f", 0d));
-		tyranScore.setFooter("Total Tyranical: " + String.format("%1$,.1f", 0d));
+		tyranScore.setFooter("Total Tyrannical : " + String.format("%1$,.1f", 0d));
 		totalScore.setFooter("Total Overall: " + String.format("%1$,.1f", 0d));
+		
+		grid.addComponentColumn(item -> createEditButton(item)).setFlexGrow(0).setFooter("Refresh All");
+		grid.addComponentColumn(item -> createRefreshButton(item, repo)).setFlexGrow(0).setFooter(createRefreshAllButton(repo));
 		
 		// Initialize listing
 		listDungeons(null);
 	}
 	
-	private Button createRemoveButton(Grid<Dungeon> grid, Dungeon item) {
+	private void loadAll() {
+
+		List<Dungeon> dungeons = getBestDungeons(loadEditor.getRegion(), loadEditor.getRealm(), loadEditor.getName());
+		
+		this.toonName = loadEditor.getName();
+		this.toonRegion = loadEditor.getRegion();
+		this.toonServer = loadEditor.getRealm();
+		
+		if(dungeons != null) {
+			repo.deleteAll();
+			repo.saveAll(dungeons);
+			getAltDungeons(loadEditor.getRegion(), loadEditor.getRealm(), loadEditor.getName(), repo);
+			listDungeons("");
+		}
+	}
+	
+	private Button createRefreshAllButton(DungeonRepository repo) {
+	    @SuppressWarnings("unchecked")
+	    Button button = new Button(VaadinIcon.REFRESH.create(), clickEvent -> {
+	    	if(this.toonName.length() > 0) {
+	    		loadAll();
+	    	}
+	    });
+	    return button;
+	}
+	
+	private Button createEditButton(Dungeon item) {
 	    @SuppressWarnings("unchecked")
 	    Button button = new Button(VaadinIcon.EDIT.create(), clickEvent -> {
-	        ListDataProvider<Dungeon> dataProvider = (ListDataProvider<Dungeon>) grid
-	                .getDataProvider();
-	        dataProvider.getItems().remove(item);
-	        dataProvider.refreshAll();
+	        if(item != null) {
+				editor.open(item);
+			}
+	    });
+	    return button;
+	}
+	private Button createRefreshButton(Dungeon item, DungeonRepository repo) {
+	    @SuppressWarnings("unchecked")
+	    Button button = new Button(VaadinIcon.REFRESH.create(), clickEvent -> {
+	        refreshDungeon(item);
+			repo.save(item);
+			listDungeons("");
 	    });
 	    return button;
 	}
@@ -172,9 +199,9 @@ public class MainLayout extends VerticalLayout {
 			averageTyran += d.getTyranLevel();
 		}
 		fortLevel.setFooter("Average Fortified: " + String.format("%1$,.1f", averageFort/8d));
-		tyranLevel.setFooter("Average Tyranical: " + String.format("%1$,.1f", averageTyran/8d));
+		tyranLevel.setFooter("Average Tyrannical : " + String.format("%1$,.1f", averageTyran/8d));
 		fortScore.setFooter("Total Fortified: " + String.format("%1$,.1f", totalFort));
-		tyranScore.setFooter("Total Tyranical: " + String.format("%1$,.1f", totalTyran));
+		tyranScore.setFooter("Total Tyrannical : " + String.format("%1$,.1f", totalTyran));
 		totalScore.setFooter("Total Overall: " + String.format("%1$,.1f", total));
 	}
 	
@@ -195,6 +222,65 @@ public class MainLayout extends VerticalLayout {
 	private void updateDungeon(Dungeon dungeon, String affix, Double percentRemaining) {
 		dungeon.update(affix, percentRemaining);
 	}
+	
+	private void refreshDungeon(Dungeon dungeon) {
+		final String bestURI = "https://raider.io/api/v1/characters/profile?region=" + toonRegion + "&realm=" + toonServer + "&name=" + toonName + "&fields=mythic_plus_best_runs";
+		final String altURI = "https://raider.io/api/v1/characters/profile?region=" + toonRegion + "&realm=" + toonServer + "&name=" + toonName + "&fields=mythic_plus_alternate_runs";
+		RestTemplate fortTemplate = new RestTemplate();
+		RestTemplate tyranTemplate = new RestTemplate();
+
+		try {
+			JSONObject bestJO = (JSONObject)(new JSONParser().parse(fortTemplate.getForObject(bestURI, String.class)));
+			JSONObject altJO = (JSONObject)(new JSONParser().parse(tyranTemplate.getForObject(altURI, String.class)));
+			
+					
+			JSONArray bestArray = ((JSONArray)bestJO.get("mythic_plus_best_runs"));
+			JSONArray altArray = ((JSONArray)altJO.get("mythic_plus_alternate_runs"));
+			
+	
+			Iterator<JSONObject> itr = bestArray.iterator();
+			String affix = "Fortified";
+			Double factor = 1.5;
+			
+			for(int i = 0; i < 2; i++) {
+				while(itr.hasNext()) {
+					JSONObject djson = (JSONObject) itr.next();
+					if(((String)djson.get("dungeon")).equals(dungeon.getName())) {
+						JSONArray affixArray = ((JSONArray)djson.get("affixes"));
+						
+						if(((String)(((JSONObject)affixArray.get(0)).get("name"))).equals(affix)) {
+							dungeon.setFortLevel(((Long)djson.get("mythic_level")).intValue());
+							dungeon.setFortScore(((Double)djson.get("score"))*factor);
+						} else {
+							dungeon.setTyranLevel(((Long)djson.get("mythic_level")).intValue());
+							dungeon.setTyranScore(((Double)djson.get("score"))*factor);
+						}
+					}
+				}
+				itr = altArray.iterator();
+				factor = 0.5;
+			}
+
+			dungeon.setTotalScore();
+			notification("Refresh Successful!", "success");
+
+		} catch (RestClientException e) {
+			notification("Lookup Failed", "error");
+			e.printStackTrace();
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void notification(String message, String theme) {
+		Span s = new Span(message);
+		Notification n = new Notification(s);
+		n.getElement().getThemeList().add(theme);
+		n.setDuration(2000);
+		n.setPosition(Notification.Position.TOP_CENTER);
+		n.open();
+	}
+	
 	
 	private List<Dungeon> getBestDungeons(String region, String realm, String name) {
 		List<Dungeon> dungeons = new ArrayList<Dungeon>();
@@ -248,22 +334,10 @@ public class MainLayout extends VerticalLayout {
 				dungeons.add(d);
 			}
 
-			Span s = new Span("Lookup Successful!");
-			Notification n = new Notification(s);
-			n.getElement().getThemeList().add("success");
-			n.setDuration(2000);
-			n.setPosition(Notification.Position.TOP_CENTER);
-			n.open();
-
+			notification("Refresh Successful!", "success");
+			
 		} catch (RestClientException e) {
-			Span s = new Span("Lookup Failed");
-			Notification n = new Notification(s);
-			n.getElement().getThemeList().add("error");
-			n.setDuration(2000);
-			n.setPosition(Notification.Position.TOP_CENTER);
-			n.open();
-			e.printStackTrace();
-			logger.error(e.getLocalizedMessage());
+			notification("Lookup Failed", "error");
 			return null;
 		} catch (ParseException e) {
 			e.printStackTrace();
@@ -301,12 +375,7 @@ public class MainLayout extends VerticalLayout {
 				}
 			}
 		} catch (RestClientException e) {
-			Span s = new Span("Lookup Failed");
-			Notification n = new Notification(s);
-			n.getElement().getThemeList().add("error");
-			n.setDuration(2000);
-			n.setPosition(Notification.Position.TOP_CENTER);
-			n.open();
+			notification("Lookup Failed", "error");
 			e.printStackTrace();
 			logger.error(e.getLocalizedMessage());
 		} catch (ParseException e) {

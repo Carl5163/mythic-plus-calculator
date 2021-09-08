@@ -105,10 +105,8 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 
         add(titleBar);
 		
-
-		addKeyPressListener(Key.ENTER, e -> loadButton.click());
-		
 		loadButton = new Button("Confirm", VaadinIcon.CLOUD_DOWNLOAD.create());
+		loadButton.addClickShortcut(Key.ENTER);
 		loadButton.addClickListener(e -> {
 			close();
 		});
