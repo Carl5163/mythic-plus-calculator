@@ -183,8 +183,7 @@
 						<include>target/${project.artifactId}-${project.version}.jar</include>
 					</includes>
 					<processTypes>
-						<web>java $JAVA_OPTS -jar
-							target/${project.artifactId}-${project.version}.jar</web>
+						<web>java $JAVA_OPTS -jar target/${project.artifactId}-${project.version}.jar</web>
 					</processTypes>
 				</configuration>
 			</plugin>
