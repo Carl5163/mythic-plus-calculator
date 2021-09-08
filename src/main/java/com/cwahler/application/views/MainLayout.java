@@ -82,6 +82,7 @@ public class MainLayout extends VerticalLayout {
 		this.repo = repo;
 		this.grid = new Grid<>(Dungeon.class);
 		dungeonList = new ArrayList<Dungeon>();
+		repo.deleteAll();
 		
 		editor = new DungeonEditor(this.repo);
 
@@ -92,7 +93,7 @@ public class MainLayout extends VerticalLayout {
 		
 		loadEditor = new LoadToonEditor();
 		loadEditor.addOnLoadListener(e -> {
-			loadAll();
+			loadAll(repo);
 		});
 
 		
@@ -140,16 +141,16 @@ public class MainLayout extends VerticalLayout {
 		listDungeons(null);
 	}
 	
-	private void loadAll() {
-
+	private void loadAll(DungeonRepository repo) {
+		
 		List<Dungeon> dungeons = getBestDungeons(loadEditor.getRegion(), loadEditor.getRealm(), loadEditor.getName());
+		repo.deleteAll();
 		
 		this.toonName = loadEditor.getName();
 		this.toonRegion = loadEditor.getRegion();
 		this.toonServer = loadEditor.getRealm();
-		
+		logger.info("Why--------------------" + dungeons.size());
 		if(dungeons != null) {
-			repo.deleteAll();
 			repo.saveAll(dungeons);
 			getAltDungeons(loadEditor.getRegion(), loadEditor.getRealm(), loadEditor.getName(), repo);
 			listDungeons("");
@@ -160,7 +161,7 @@ public class MainLayout extends VerticalLayout {
 	    @SuppressWarnings("unchecked")
 	    Button button = new Button(VaadinIcon.REFRESH.create(), clickEvent -> {
 	    	if(this.toonName.length() > 0) {
-	    		loadAll();
+	    		loadAll(repo);
 	    	}
 	    });
 	    return button;
@@ -249,11 +250,11 @@ public class MainLayout extends VerticalLayout {
 						JSONArray affixArray = ((JSONArray)djson.get("affixes"));
 						
 						if(((String)(((JSONObject)affixArray.get(0)).get("name"))).equals(affix)) {
-							dungeon.setFortLevel(((Long)djson.get("mythic_level")).intValue());
-							dungeon.setFortScore(((Double)djson.get("score"))*factor);
+							dungeon.setFortLevel(Integer.parseInt(djson.get("mythic_level").toString()));
+							dungeon.setFortScore(Double.parseDouble(djson.get("score").toString())*factor);
 						} else {
-							dungeon.setTyranLevel(((Long)djson.get("mythic_level")).intValue());
-							dungeon.setTyranScore(((Double)djson.get("score"))*factor);
+							dungeon.setTyranLevel(Integer.parseInt(djson.get("mythic_level").toString()));
+							dungeon.setTyranScore(Double.parseDouble(djson.get("score").toString())*factor);
 						}
 					}
 				}
@@ -317,17 +318,17 @@ public class MainLayout extends VerticalLayout {
 				if(((String)(((JSONObject)affixArray.get(0)).get("name"))).equals("Fortified")) {
 					d = new Dungeon(
 					(String)djson.get("dungeon"), 
-					((Long)djson.get("mythic_level")).intValue(), 
+					Integer.parseInt(djson.get("mythic_level").toString()), 
 					0, 
-					((Double)djson.get("score"))*1.5,
+					Double.parseDouble(djson.get("score").toString())*1.5,
 					0);
 				} else {
 					d = new Dungeon(
 					(String)djson.get("dungeon"), 
 					0, 
-					((Long)djson.get("mythic_level")).intValue(), 
+					Integer.parseInt(djson.get("mythic_level").toString()), 
 					0,
-					((Double)djson.get("score"))*1.5);
+					Double.parseDouble(djson.get("score").toString())*1.5);
 				}
 
 				
@@ -365,11 +366,11 @@ public class MainLayout extends VerticalLayout {
 
 					JSONArray affixArray = ((JSONArray)djson.get("affixes"));
 					if(((String)(((JSONObject)affixArray.get(0)).get("name"))).equals("Fortified")) {
-						dBest.setFortLevel(((Long)djson.get("mythic_level")).intValue());
-						dBest.setFortScore(((Number)djson.get("score")).doubleValue()*.5);
+						dBest.setFortLevel((Integer.parseInt(djson.get("mythic_level").toString())));
+						dBest.setFortScore(Double.parseDouble(djson.get("score").toString())*.5);
 					} else {
-						dBest.setTyranLevel(((Long)djson.get("mythic_level")).intValue());
-						dBest.setTyranScore(((Number)djson.get("score")).doubleValue()*.5);
+						dBest.setTyranLevel(Integer.parseInt(djson.get("mythic_level").toString()));
+						dBest.setTyranScore(Double.parseDouble(djson.get("score").toString())*.5);
 					}
 					repository.save(dBest);
 				}

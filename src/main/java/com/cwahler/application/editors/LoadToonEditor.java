@@ -100,7 +100,7 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
         
         titleBar.add(i);
         i.addClickListener(listener -> {
-                close();
+            close();
         });
 
         add(titleBar);
