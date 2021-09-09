@@ -4,6 +4,8 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 
+import com.vaadin.flow.function.ValueProvider;
+
 
 @Entity
 public class Dungeon {
@@ -19,6 +21,12 @@ public class Dungeon {
     private double tyranScore = 0;
     private double totalScore = 0;
     private double percentRemaining = 0;
+
+	private int fortLevelActual = 0;
+    private int tyranLevelActual = 0;
+    private double fortActual = 0;
+    private double tyranActual = 0;
+    private double totalActual = 0;
     
     public static double[] BASE = {	  0,    
     								  0, 40, 45, 55, 60, 65, 75, 80, 85,100,
@@ -34,6 +42,14 @@ public class Dungeon {
         this.fortScore = fortScore;
         this.tyranScore = tyranScore;
         this.setTotalScore();
+    }
+    
+    public void setActuals() {
+        fortLevelActual = fortLevel;
+        tyranLevelActual = tyranLevel;
+        fortActual = fortScore;
+        tyranActual = tyranScore;
+        totalActual = totalScore;
     }
     
     public void update(String affix, double percentRemaining) {
@@ -59,6 +75,48 @@ public class Dungeon {
     		fortScore *= .5;
     	}
     	setTotalScore();
+    }
+    
+    public String getDeltaSignDouble(ValueProvider<Dungeon, Double> curProv, ValueProvider<Dungeon, Double> actProv) {
+    	Double delta = curProv.apply(this) - actProv.apply(this);
+    	int comparison = Double.compare(delta, 0);
+    	if(comparison > 0) {
+        	return "+";
+    	}
+    	return "";
+    }
+    
+    public String getDeltaSignInt(ValueProvider<Dungeon, Integer> curProv, ValueProvider<Dungeon, Integer> actProv) {
+    	Integer delta = curProv.apply(this) - actProv.apply(this);
+    	int comparison = Integer.compare(delta, 0);
+    	if(comparison > 0) {
+        	return "+";
+    	}
+    	return "";
+    }
+    
+    public String getDeltaColorDouble(ValueProvider<Dungeon, Double> curProv, ValueProvider<Dungeon, Double> actProv) {
+    	Double delta = curProv.apply(this) - actProv.apply(this);
+    	int comparison = Double.compare(delta, 0);
+    	if(comparison < 0) {
+        	return "red";
+    	} else if(comparison > 0) {
+        	return "lime";
+    	} else {
+        	return "white";
+    	}
+    }
+    
+    public String getDeltaColorInt(ValueProvider<Dungeon, Integer> curProv, ValueProvider<Dungeon, Integer> actProv) {
+    	Integer delta = curProv.apply(this) - actProv.apply(this);
+    	int comparison = Integer.compare(delta, 0);
+    	if(comparison < 0) {
+        	return "red";
+    	} else if(comparison > 0) {
+        	return "lime";
+    	} else {
+        	return "white";
+    	}
     }
 
     public String getName() {
@@ -122,6 +180,47 @@ public class Dungeon {
     public Long getId() {
         return id;
     }
+    
+
+    public int getFortLevelActual() {
+		return fortLevelActual;
+	}
+
+	public void setFortLevelActual(int fortLevelActual) {
+		this.fortLevelActual = fortLevelActual;
+	}
+
+	public int getTyranLevelActual() {
+		return tyranLevelActual;
+	}
+
+	public void setTyranLevelActual(int tyranLevelActual) {
+		this.tyranLevelActual = tyranLevelActual;
+	}
+
+	public double getFortActual() {
+		return fortActual;
+	}
+
+	public void setFortActual(double fortActual) {
+		this.fortActual = fortActual;
+	}
+
+	public double getTyranActual() {
+		return tyranActual;
+	}
+
+	public void setTyranActual(double tyranActual) {
+		this.tyranActual = tyranActual;
+	}
+
+	public double getTotalActual() {
+		return totalActual;
+	}
+
+	public void setTotalActual(double totalActual) {
+		this.totalActual = totalActual;
+	}
 
     @Override
     public String toString() {
