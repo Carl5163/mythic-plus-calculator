@@ -120,7 +120,7 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 		percentRemaining.setHasControls(true);
 		percentRemaining.setMin(-45);
 		percentRemaining.setMax(45);
-		percentRemaining.setStep(0.5d);
+		percentRemaining.setStep(0.1d);
 		percentRemaining.addValueChangeListener(e -> {
 			if(percentRemaining.isInvalid()) {
 				save.setEnabled(false);
