@@ -19,9 +19,11 @@ import com.cwahler.application.editors.DungeonEditor;
 import com.cwahler.application.editors.LoadToonEditor;
 import com.cwahler.application.entities.Dungeon;
 import com.cwahler.application.repositories.DungeonRepository;
+import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.Unit;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.Grid.Column;
 import com.vaadin.flow.component.html.Image;
@@ -33,6 +35,8 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.data.renderer.NumberRenderer;
+import com.vaadin.flow.data.renderer.TemplateRenderer;
+import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.PWA;
@@ -123,22 +127,45 @@ public class MainLayout extends VerticalLayout {
 		// build layout
 		grid.setHeightByRows(true);
 		add(grid);
-
 		grid.setColumns("name");
-		tyranLevel = grid.addColumn("tyranLevel").setHeader("Tyrannical  Level");
-		fortLevel = grid.addColumn("fortLevel").setHeader("Fortified Level");
-		fortScore = grid.addColumn(new NumberRenderer<>(Dungeon::getFortScore, "%(,.1f", getLocale())).setHeader("Fortified Score");
-		tyranScore = grid.addColumn(new NumberRenderer<>(Dungeon::getTyranScore, "%(,.1f", getLocale())).setHeader("Tyrannical  Score");
+		tyranLevel = grid.addColumn(getDeltaRendererInt("", "tyranLevel", Dungeon::getTyranLevel, Dungeon::getTyranLevelActual)).setHeader("Tyrannical Level");
+		fortLevel = grid.addColumn(getDeltaRendererInt("", "fortLevel", Dungeon::getFortLevel, Dungeon::getFortLevelActual)).setHeader("Fortified Level");
+
+		fortScore = grid.addColumn(getDeltaRendererDouble("", "fortScore", Dungeon::getFortScore, Dungeon::getFortActual)).setHeader("Fortified Score");
+		tyranScore = grid.addColumn(getDeltaRendererDouble("", "tyranScore", Dungeon::getTyranScore, Dungeon::getTyranActual)).setHeader("Tyrannical  Score");
 		totalScore = grid.addColumn(new NumberRenderer<>(Dungeon::getTotalScore, "%(,.1f", getLocale())).setHeader("Total Score");
 		fortScore.setFooter("Total Fortified: " + String.format("%1$,.1f", 0d));
-		tyranScore.setFooter("Total Tyrannical : " + String.format("%1$,.1f", 0d));
+		tyranScore.setFooter("Total Tyrannical: " + String.format("%1$,.1f", 0d));
 		totalScore.setFooter("Total Overall: " + String.format("%1$,.1f", 0d));
-		
-		grid.addComponentColumn(item -> createEditButton(item)).setFlexGrow(0).setFooter("Refresh All");
-		grid.addComponentColumn(item -> createRefreshButton(item, repo)).setFlexGrow(0).setFooter(createRefreshAllButton(repo));
+		grid.addComponentColumn(item -> {
+				HorizontalLayout l = new HorizontalLayout();
+				l.add(createEditButton(item), createRefreshButton(item, repo));
+				l.setJustifyContentMode(JustifyContentMode.END);
+				return l;
+			}).setFooter(createRefreshAllButton(repo)).setTextAlign(ColumnTextAlign.END);
 		
 		// Initialize listing
 		listDungeons(null);
+	}
+	
+	private TemplateRenderer<Dungeon> getDeltaRendererInt(String prefix, String prop, ValueProvider<Dungeon, Integer> curProv, ValueProvider<Dungeon, Integer> actProv) {
+		TemplateRenderer<Dungeon> ret = null;
+		ret = TemplateRenderer.<Dungeon>of(prefix + "[[item."+prop+"]] <span style=\"color:[[item."+prop+"deltaColor]];\">([[item."+prop+"deltaSign]][[item."+prop+"delta]])</span>")
+				.withProperty(prop, dungeon -> curProv.apply(dungeon))
+				.withProperty(prop+"deltaColor", dungeon -> dungeon.getDeltaColorInt(curProv, actProv))
+				.withProperty(prop+"deltaSign", dungeon -> dungeon.getDeltaSignInt(curProv, actProv))
+				.withProperty(prop+"delta", dungeon -> curProv.apply(dungeon)-actProv.apply(dungeon));
+		return ret;
+	}
+	
+	private TemplateRenderer<Dungeon> getDeltaRendererDouble(String prefix, String prop, ValueProvider<Dungeon, Double> curProv, ValueProvider<Dungeon, Double> actProv) {
+		TemplateRenderer<Dungeon> ret = null;
+		ret = TemplateRenderer.<Dungeon>of(prefix + "[[item."+prop+"]] <span style=\"color:[[item."+prop+"deltaColor]];\">([[item."+prop+"deltaSign]][[item."+prop+"delta]])</span>")
+				.withProperty(prop, dungeon -> String.format("%1$,.1f", curProv.apply(dungeon)))
+				.withProperty(prop+"deltaColor", dungeon -> dungeon.getDeltaColorDouble(curProv, actProv))
+				.withProperty(prop+"deltaSign", dungeon -> dungeon.getDeltaSignDouble(curProv, actProv))
+				.withProperty(prop+"delta", dungeon -> String.format("%1$,.1f", curProv.apply(dungeon)-actProv.apply(dungeon)));
+		return ret;
 	}
 	
 	private void loadAll(DungeonRepository repo) {
@@ -149,7 +176,6 @@ public class MainLayout extends VerticalLayout {
 		this.toonName = loadEditor.getName();
 		this.toonRegion = loadEditor.getRegion();
 		this.toonServer = loadEditor.getRealm();
-		logger.info("Why--------------------" + dungeons.size());
 		if(dungeons != null) {
 			repo.saveAll(dungeons);
 			getAltDungeons(loadEditor.getRegion(), loadEditor.getRealm(), loadEditor.getName(), repo);
@@ -159,11 +185,12 @@ public class MainLayout extends VerticalLayout {
 	
 	private Button createRefreshAllButton(DungeonRepository repo) {
 	    @SuppressWarnings("unchecked")
-	    Button button = new Button(VaadinIcon.REFRESH.create(), clickEvent -> {
+	    Button button = new Button("Reload All", VaadinIcon.REFRESH.create(), clickEvent -> {
 	    	if(this.toonName.length() > 0) {
 	    		loadAll(repo);
 	    	}
 	    });
+
 	    return button;
 	}
 	
@@ -192,18 +219,63 @@ public class MainLayout extends VerticalLayout {
 		double totalTyran = 0;
 		double averageFort = 0;
 		double averageTyran = 0;
+		double totalActual = 0;
+		double totalFortActual = 0;
+		double totalTyranActual = 0;
+		double averageFortActual = 0;
+		double averageTyranActual = 0;
 		for(Dungeon d : dungeonList) {
 			total += d.getTotalScore();
 			totalFort += d.getFortScore();
 			totalTyran += d.getTyranScore();
 			averageFort += d.getFortLevel();
 			averageTyran += d.getTyranLevel();
+
+			totalActual += d.getTotalActual();
+			totalFortActual += d.getFortActual();
+			totalTyranActual += d.getTyranActual();
+			averageFortActual += d.getFortLevelActual();
+			averageTyranActual += d.getTyranLevelActual();
+			logger.info("Total Fort: " + totalFort + " TotalFortActual: " + totalFortActual);
 		}
-		fortLevel.setFooter("Average Fortified: " + String.format("%1$,.1f", averageFort/8d));
-		tyranLevel.setFooter("Average Tyrannical : " + String.format("%1$,.1f", averageTyran/8d));
-		fortScore.setFooter("Total Fortified: " + String.format("%1$,.1f", totalFort));
-		tyranScore.setFooter("Total Tyrannical : " + String.format("%1$,.1f", totalTyran));
-		totalScore.setFooter("Total Overall: " + String.format("%1$,.1f", total));
+		
+
+		averageFort /= 8;		
+		averageTyran /= 8;
+
+		averageFortActual /= 8;
+		averageTyranActual /= 8;
+		
+		String fortTotalColor = totalFort-totalFortActual > 0 ? "lime" : "red";
+		if(Double.compare(totalFort-totalFortActual, 0) == 0) fortTotalColor = "white";
+		String fortTotalSign = totalFort-totalFortActual > 0 ? "+" : "";
+		String averageFortColor = averageFort-averageFortActual > 0 ? "lime" : "red";
+		if(Double.compare(averageFort-averageFortActual, 0) == 0) averageFortColor = "white";
+		String averageFortSign = averageFort-averageFortActual > 0 ? "+" : "";
+
+		String tyranTotalColor = totalTyran-totalTyranActual > 0 ? "lime" : "red";
+		if(Double.compare(totalTyran-totalTyranActual, 0) == 0) tyranTotalColor = "white";
+		String tyranTotalSign = totalTyran-totalTyranActual > 0 ? "+" : "";
+		String averageTyranColor = averageTyran-averageTyranActual > 0 ? "lime" : "red";
+		if(Double.compare(averageTyran-averageTyranActual, 0) == 0) averageTyranColor = "white";
+		String averageTyranSign = averageTyran-averageTyranActual > 0 ? "+" : "";
+		
+		String averageTotalColor = total-totalActual > 0 ? "lime" : "red";
+		if(Double.compare(total-totalActual, 0) == 0) averageTotalColor = "white";
+		String averageTotalSign = total-totalActual > 0 ? "+" : "";
+		
+		Html fortLevelRenderer = new Html("<p><span>Average Fortified: </span>" + String.format("%1$,.1f", averageFort) +" <span style=\"color:" + averageFortColor +";\">("+averageFortSign+String.format("%1$,.1f", (averageFort-averageFortActual))+")</span></p>");
+		Html tyranLevelRenderer = new Html("<p><span>Average Tyrannical: </span>" + String.format("%1$,.1f", averageTyran) +" <span style=\"color:" + averageTyranColor +";\">("+averageTyranSign+String.format("%1$,.1f", (averageTyran-averageTyranActual))+")</span></p>");
+		Html fortScoreRenderer = new Html("<p><span>Total Fortified: </span>" + String.format("%1$,.1f", totalFort) +" <span style=\"color:" + fortTotalColor +";\">("+fortTotalSign+String.format("%1$,.1f", (totalFort-totalFortActual))+")</span></p>");
+		Html tyranScoreRenderer = new Html("<p><span>Total Tyrannical: </span>" + String.format("%1$,.1f", totalTyran) +" <span style=\"color:" + tyranTotalColor +";\">("+tyranTotalSign+String.format("%1$,.1f", (totalTyran-totalTyranActual))+")</span></p>");
+		
+		Html totalScoreRenderer = new Html("<p><span>Total Overall: </span>" + String.format("%1$,.1f", total) +" <span style=\"color:" + averageTotalColor +";\">("+averageTotalSign+String.format("%1$,.1f", (total-totalActual))+")</span></p>");
+		
+		fortLevel.setFooter(fortLevelRenderer);
+		tyranLevel.setFooter(tyranLevelRenderer);
+		fortScore.setFooter(fortScoreRenderer);
+		tyranScore.setFooter(tyranScoreRenderer);
+		totalScore.setFooter(totalScoreRenderer);
 	}
 	
 	// tag::listDungeons[]
@@ -372,6 +444,7 @@ public class MainLayout extends VerticalLayout {
 						dBest.setTyranLevel(Integer.parseInt(djson.get("mythic_level").toString()));
 						dBest.setTyranScore(Double.parseDouble(djson.get("score").toString())*.5);
 					}
+					dBest.setActuals();
 					repository.save(dBest);
 				}
 			}
