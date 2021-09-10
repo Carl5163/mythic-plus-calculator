@@ -1,6 +1,5 @@
 package com.cwahler.application.views;
 
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -114,9 +113,9 @@ public class MainLayout extends VerticalLayout {
 		add(banner);
 		
 		
-		editor.setSaveHandler((dungeon, affix, percentRemaining) -> {
+		editor.setSaveHandler((dungeon, fortPercentRemaining, tyranPercentRemaining) -> {
 			if(editor.isValid()) {
-				updateDungeon(dungeon, affix, percentRemaining);
+				updateDungeon(dungeon, fortPercentRemaining, tyranPercentRemaining);
 				repo.save(dungeon);
 				editor.close();
 				listDungeons("");
@@ -236,7 +235,6 @@ public class MainLayout extends VerticalLayout {
 			totalTyranActual += d.getTyranActual();
 			averageFortActual += d.getFortLevelActual();
 			averageTyranActual += d.getTyranLevelActual();
-			logger.info("Total Fort: " + totalFort + " TotalFortActual: " + totalFortActual);
 		}
 		
 
@@ -247,21 +245,21 @@ public class MainLayout extends VerticalLayout {
 		averageTyranActual /= 8;
 		
 		String fortTotalColor = totalFort-totalFortActual > 0 ? "lime" : "red";
-		if(Double.compare(totalFort-totalFortActual, 0) == 0) fortTotalColor = "white";
+		if(doubleCompare(totalFort-totalFortActual, 0) == 0) fortTotalColor = "white";
 		String fortTotalSign = totalFort-totalFortActual > 0 ? "+" : "";
 		String averageFortColor = averageFort-averageFortActual > 0 ? "lime" : "red";
-		if(Double.compare(averageFort-averageFortActual, 0) == 0) averageFortColor = "white";
+		if(doubleCompare(averageFort-averageFortActual, 0) == 0) averageFortColor = "white";
 		String averageFortSign = averageFort-averageFortActual > 0 ? "+" : "";
 
 		String tyranTotalColor = totalTyran-totalTyranActual > 0 ? "lime" : "red";
-		if(Double.compare(totalTyran-totalTyranActual, 0) == 0) tyranTotalColor = "white";
+		if(doubleCompare(totalTyran-totalTyranActual, 0) == 0) tyranTotalColor = "white";
 		String tyranTotalSign = totalTyran-totalTyranActual > 0 ? "+" : "";
 		String averageTyranColor = averageTyran-averageTyranActual > 0 ? "lime" : "red";
-		if(Double.compare(averageTyran-averageTyranActual, 0) == 0) averageTyranColor = "white";
+		if(doubleCompare(averageTyran-averageTyranActual, 0) == 0) averageTyranColor = "white";
 		String averageTyranSign = averageTyran-averageTyranActual > 0 ? "+" : "";
 		
 		String averageTotalColor = total-totalActual > 0 ? "lime" : "red";
-		if(Double.compare(total-totalActual, 0) == 0) averageTotalColor = "white";
+		if(doubleCompare(total-totalActual, 0) == 0) averageTotalColor = "white";
 		String averageTotalSign = total-totalActual > 0 ? "+" : "";
 		
 		Html fortLevelRenderer = new Html("<p><span>Average Fortified: </span>" + String.format("%1$,.1f", averageFort) +" <span style=\"color:" + averageFortColor +";\">("+averageFortSign+String.format("%1$,.1f", (averageFort-averageFortActual))+")</span></p>");
@@ -276,6 +274,21 @@ public class MainLayout extends VerticalLayout {
 		fortScore.setFooter(fortScoreRenderer);
 		tyranScore.setFooter(tyranScoreRenderer);
 		totalScore.setFooter(totalScoreRenderer);
+	}
+
+	public int doubleCompare(double d1, double d2) {
+		double epsilon = 0.05d;
+		int ret = 0;
+		if(d1 < d2-epsilon) {
+			ret = -1;
+		}
+		if(d1 > d2+epsilon) {
+			ret = 1;
+		}
+		if(Math.abs(d1 - d2) <= epsilon) {
+			ret = 0;
+		}
+		return ret;
 	}
 	
 	// tag::listDungeons[]
@@ -292,8 +305,8 @@ public class MainLayout extends VerticalLayout {
 	}
 	// end::listDungeons[]
 
-	private void updateDungeon(Dungeon dungeon, String affix, Double percentRemaining) {
-		dungeon.update(affix, percentRemaining);
+	private void updateDungeon(Dungeon dungeon, Double fortPercentRemaining, Double tyranPercentRemaining) {
+		dungeon.update(fortPercentRemaining, tyranPercentRemaining);
 	}
 	
 	private void refreshDungeon(Dungeon dungeon) {
@@ -324,9 +337,11 @@ public class MainLayout extends VerticalLayout {
 						if(((String)(((JSONObject)affixArray.get(0)).get("name"))).equals(affix)) {
 							dungeon.setFortLevel(Integer.parseInt(djson.get("mythic_level").toString()));
 							dungeon.setFortScore(Double.parseDouble(djson.get("score").toString())*factor);
+							dungeon.setFortPercentRemaining(Long.parseLong(djson.get("par_time_ms").toString()), Long.parseLong(djson.get("clear_time_ms").toString()));
 						} else {
 							dungeon.setTyranLevel(Integer.parseInt(djson.get("mythic_level").toString()));
 							dungeon.setTyranScore(Double.parseDouble(djson.get("score").toString())*factor);
+							dungeon.setTyranPercentRemaining(Long.parseLong(djson.get("par_time_ms").toString()), Long.parseLong(djson.get("clear_time_ms").toString()));
 						}
 					}
 				}
@@ -393,14 +408,22 @@ public class MainLayout extends VerticalLayout {
 					Integer.parseInt(djson.get("mythic_level").toString()), 
 					0, 
 					Double.parseDouble(djson.get("score").toString())*1.5,
-					0);
+					0,
+					Long.parseLong(djson.get("par_time_ms").toString()),
+					1,
+					Long.parseLong(djson.get("clear_time_ms").toString()),
+					1);
 				} else {
 					d = new Dungeon(
 					(String)djson.get("dungeon"), 
 					0, 
 					Integer.parseInt(djson.get("mythic_level").toString()), 
 					0,
-					Double.parseDouble(djson.get("score").toString())*1.5);
+					Double.parseDouble(djson.get("score").toString())*1.5,
+					1,
+					Long.parseLong(djson.get("par_time_ms").toString()),
+					1,
+					Long.parseLong(djson.get("clear_time_ms").toString()));
 				}
 
 				
@@ -440,9 +463,11 @@ public class MainLayout extends VerticalLayout {
 					if(((String)(((JSONObject)affixArray.get(0)).get("name"))).equals("Fortified")) {
 						dBest.setFortLevel((Integer.parseInt(djson.get("mythic_level").toString())));
 						dBest.setFortScore(Double.parseDouble(djson.get("score").toString())*.5);
+						dBest.setFortPercentRemaining(Long.parseLong(djson.get("par_time_ms").toString()), Long.parseLong(djson.get("clear_time_ms").toString()));
 					} else {
 						dBest.setTyranLevel(Integer.parseInt(djson.get("mythic_level").toString()));
 						dBest.setTyranScore(Double.parseDouble(djson.get("score").toString())*.5);
+						dBest.setTyranPercentRemaining(Long.parseLong(djson.get("par_time_ms").toString()), Long.parseLong(djson.get("clear_time_ms").toString()));
 					}
 					dBest.setActuals();
 					repository.save(dBest);

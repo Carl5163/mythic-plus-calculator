@@ -41,6 +41,10 @@
 				<enabled>false</enabled>
 			</snapshots>
 		</repository>
+		<repository>
+		   <id>vaadin-addons</id>
+		   <url>https://maven.vaadin.com/vaadin-addons</url>
+		</repository>
 	</repositories>
 
 	<pluginRepositories>
@@ -67,6 +71,11 @@
 	</dependencyManagement>
 
 	<dependencies>
+		<dependency>
+		   <groupId>org.vaadin.miki</groupId>
+		   <artifactId>superfields</artifactId>
+		   <version>0.10.2</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>

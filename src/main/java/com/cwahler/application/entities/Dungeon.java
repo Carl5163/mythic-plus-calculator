@@ -19,28 +19,33 @@ public class Dungeon {
     private int tyranLevel = 0;
     private double fortScore = 0;
     private double tyranScore = 0;
+    private double fortPercentRemaining = 0;
+    private double tyranPercentRemaining = 0;
     private double totalScore = 0;
-    private double percentRemaining = 0;
 
 	private int fortLevelActual = 0;
     private int tyranLevelActual = 0;
     private double fortActual = 0;
     private double tyranActual = 0;
+    private double fortPercentRemainingActual = 0;
+    private double tyranPercentRemainingActual = 0;
     private double totalActual = 0;
     
-    public static double[] BASE = {	  0,    
+    private static double[] BASE = {	  0,    
     								  0, 40, 45, 55, 60, 65, 75, 80, 85,100,
     								105,110,115,120,125,130,135,140,145,150,
     								155,160,165,170,175,180,185,190,195,200};
 
     public Dungeon(){}
-
-    public Dungeon(String name, int fortLevel, int tyranLevel, double fortScore, double tyranScore) {
+    
+    public Dungeon(String name, int fortLevel, int tyranLevel, double fortScore, double tyranScore, long fortParTimeMs, long tyranParTimeMs, long fortClearTimeMs, long tyranClearTimeMs) {
         this.name = name;
         this.fortLevel = fortLevel;
         this.tyranLevel = tyranLevel;
         this.fortScore = fortScore;
         this.tyranScore = tyranScore;
+        this.fortPercentRemaining = (((double)fortParTimeMs-(double)fortClearTimeMs)/(double)fortParTimeMs)*100;
+        this.tyranPercentRemaining = (((double)tyranParTimeMs-(double)tyranClearTimeMs)/(double)tyranParTimeMs)*100;
         this.setTotalScore();
     }
     
@@ -50,23 +55,42 @@ public class Dungeon {
         fortActual = fortScore;
         tyranActual = tyranScore;
         totalActual = totalScore;
+        fortPercentRemainingActual = fortPercentRemaining;
+        tyranPercentRemainingActual = tyranPercentRemaining;
     }
     
-    public void update(String affix, double percentRemaining) {
-    	fortScore = BASE[fortLevel];
-    	tyranScore = BASE[tyranLevel];
-    	double bonus = 0;
-    	if(percentRemaining >= -40 && percentRemaining < 0) {
-    		bonus = (15d/40d)*percentRemaining;
-    	} else if(percentRemaining > 0 && percentRemaining <= 40) {
-    		bonus = (7.5d/40d)*percentRemaining;
-    	}
-    	
-    	if(affix.equals("Fortified")) {
-    		fortScore += bonus;
+    public void update(double fortPercentRemaining, double tyranPercentRemaining) {
+    	if(fortLevel > 30) {
+    		fortScore = BASE[30] + 5*(fortLevel-30);
     	} else {
-    		tyranScore += bonus;
+    		fortScore = BASE[fortLevel];
     	}
+    	double bonus = 0;
+    	if(fortPercentRemaining >= -40 && fortPercentRemaining < 0) {
+    		bonus = (5d/40d)*fortPercentRemaining-5;
+    	} else if(fortPercentRemaining > 0 && fortPercentRemaining <= 40) {
+    		bonus = (5d/40d)*fortPercentRemaining;
+    	} else if(fortPercentRemaining > 40) {
+    		bonus = 5;
+    	}
+		fortScore += bonus;
+		
+
+
+    	if(tyranLevel > 30) {
+    		tyranScore = BASE[30] + 5*(tyranLevel-30);
+    	} else {
+    		tyranScore = BASE[tyranLevel];
+    	}
+    	if(tyranPercentRemaining >= -40 && tyranPercentRemaining < 0) {
+    		bonus = (5d/40d)*tyranPercentRemaining-5;
+    	} else if(tyranPercentRemaining > 0 && tyranPercentRemaining <= 40) {
+    		bonus = (5d/40d)*tyranPercentRemaining;
+    	} else if(tyranPercentRemaining > 40) {
+    		bonus = 5;
+    	}
+		tyranScore += bonus;
+		
     	if(fortScore > tyranScore) {
     		fortScore *= 1.5;
     		tyranScore *= .5;
@@ -165,15 +189,27 @@ public class Dungeon {
         return this.totalScore;
     }
     
-    public double getPercentRemaining() {
-        return percentRemaining;
+    public double getFortPercentRemaining() {
+        return fortPercentRemaining;
     }
-    public void setPercentRemaining(double percentRemaining) {
-        this.percentRemaining = percentRemaining;
+    public void setFortPercentRemaining(long parTime, long clearTime) {
+        this.fortPercentRemaining = (((double)parTime-(double)clearTime)/(double)parTime)*100;
+    }
+    public void setFortPercentRemaining(double percentRemaining) {
+        this.fortPercentRemaining = percentRemaining;
+    }
+
+    public double getTyranPercentRemaining() {
+        return tyranPercentRemaining;
+    }
+    public void setTyranPercentRemaining(long parTime, long clearTime) {
+        this.tyranPercentRemaining = (((double)parTime-(double)clearTime)/(double)parTime)*100;
+    }
+    public void setTyranPercentRemaining(double percentRemaining) {
+        this.tyranPercentRemaining = percentRemaining;
     }
 
     public void setTotalScore() {
-        // this.totalScore = Math.max(fortScore, tyranScore) + 0.5* Math.min(fortScore, tyranScore);
         this.totalScore = fortScore + tyranScore;
     }
 

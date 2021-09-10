@@ -1,6 +1,9 @@
 package com.cwahler.application.editors;
 
+import java.util.Locale;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.vaadin.miki.superfields.numbers.SuperDoubleField;
 
 import com.cwahler.application.entities.Dungeon;
 import com.cwahler.application.repositories.DungeonRepository;
@@ -14,15 +17,8 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
-import com.vaadin.flow.component.radiobutton.RadioGroupVariant;
 import com.vaadin.flow.component.textfield.IntegerField;
-import com.vaadin.flow.component.textfield.NumberField;
-import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
-import com.vaadin.flow.data.binder.Validator;
-import com.vaadin.flow.data.converter.StringToDoubleConverter;
-import com.vaadin.flow.data.converter.StringToIntegerConverter;
 
 public class DungeonEditor extends Dialog implements KeyNotifier {
 
@@ -36,9 +32,8 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 	/* Fields to edit properties in Dungeon entity */
 	IntegerField fortLevel = new IntegerField("fortLevel");
 	IntegerField tyranLevel = new IntegerField("tyranLevel");
-	NumberField percentRemaining = new NumberField("percentRemaining");
-
-	RadioButtonGroup<String> rbg = new RadioButtonGroup<String>();
+	SuperDoubleField fortPercentRemaining = new SuperDoubleField("Fortified", Locale.getDefault(), 1);
+	SuperDoubleField tyranPercentRemaining = new SuperDoubleField("Tyrannical", Locale.getDefault(), 1);
 	
 	/* Action buttons */
 	
@@ -80,28 +75,12 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
         
 		this.repository = repository;
 		layout.setWidth(this.getMaxWidth());
-		Span pRem = new Span("Percentage Remaining (Negative for Overtime, Positive for Undertime)");
-		percentRemaining.setLabel("");
-		percentRemaining.setValue(0d);
-		
 
-		rbg.setLabel("Affix");
-		rbg.setItems("Fortified", "Tyrannical ");
-		rbg.addThemeVariants(RadioGroupVariant.LUMO_VERTICAL);
-		rbg.setValue("Fortified");
-		rbg.addValueChangeListener(event -> {
-			if(event.getValue().equals("Fortified")) {
-				tyranLevel.setVisible(false);
-				fortLevel.setVisible(true);
-			} else {
-				tyranLevel.setVisible(true);
-				fortLevel.setVisible(false);
-			}
-		});
-		
-		fortLevel.setLabel("Fortified Level");
-		tyranLevel.setLabel("Tyrannical  Level");
-		tyranLevel.setVisible(false);
+		Span keyLevel = new Span("Keystone Levels");
+		HorizontalLayout levelLayout = new HorizontalLayout();
+				
+		fortLevel.setLabel("Fortified");
+		tyranLevel.setLabel("Tyrannical");
 		
 		fortLevel.setHasControls(true);
 		fortLevel.setMin(2);
@@ -117,30 +96,28 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 				save.setEnabled(false);
 			}
 		});
-		percentRemaining.setHasControls(true);
-		percentRemaining.setMin(-45);
-		percentRemaining.setMax(45);
-		percentRemaining.setStep(0.1d);
-		percentRemaining.addValueChangeListener(e -> {
-			if(percentRemaining.isInvalid()) {
-				save.setEnabled(false);
-			}
-		});
 		
-		layout.add(fortLevel, tyranLevel, rbg, pRem, percentRemaining, actions);
+		levelLayout.add(fortLevel, tyranLevel);
+		
+		Span pRem = new Span("Percentage Remaining (Negative for Overtime, Positive for Undertime)");
+		HorizontalLayout percentRemainingLayout = new HorizontalLayout();
+		
+		fortPercentRemaining.setValue(0d);
+		
+		tyranPercentRemaining.setValue(0d);
+		
+		percentRemainingLayout.add(fortPercentRemaining, tyranPercentRemaining);
+		
+		layout.add(keyLevel, levelLayout, pRem, percentRemainingLayout, actions);
 
 
 		binder.forField ( this.fortLevel )
-		.withValidator(num -> this.fortLevel.getValue() >= 2 && this.fortLevel.getValue() <= 30, "Key level must be between 2 and 30.")
+		.withValidator(num -> this.fortLevel.getValue() >= 2, "Key level must be >= 2.")
         .bind ( Dungeon::getFortLevel, Dungeon::setFortLevel );
 		
 		binder.forField ( this.tyranLevel )
-		.withValidator(num -> this.tyranLevel.getValue() >= 2 && this.tyranLevel.getValue() <= 30, "Key level must be between 2 and 30.")
+		.withValidator(num -> this.tyranLevel.getValue() >= 2, "Key level must be >= 2.")
         .bind ( Dungeon::getTyranLevel, Dungeon::setTyranLevel );
-		
-		binder.forField ( this.percentRemaining )
-		.withValidator(num -> this.percentRemaining.getValue() >= -45 && this.percentRemaining.getValue() <= 45, "Percent remaining must be between -45% and 45%.")
-        .bind ( Dungeon::getPercentRemaining, Dungeon::setPercentRemaining );
 		
 		
 		// bind using naming convention
@@ -164,26 +141,22 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 		if(tyranLevel.isInvalid() ) {
 			return false;
 		}
-		if(percentRemaining.isInvalid()) {
-			return false;
-		}
 		return true;
 	}
 	
 	public void open(Dungeon d) {
 		titleSpan.setText("Edit Dungeon - " + d.getName());
 		editDungeon(d);
-		rbg.setValue("Fortified");
 		super.open();
 	}
 
 	void save() {
 		repository.save(dungeon);
-		changeHandler.onSave(dungeon, rbg.getValue(), percentRemaining.getValue());
+		changeHandler.onSave(dungeon, fortPercentRemaining.getValue(), tyranPercentRemaining.getValue());
 	}
 
 	public interface ChangeHandler {
-		void onSave(Dungeon dungeon, String affix, Double percent);
+		void onSave(Dungeon dungeon, Double fortPercentRemaining, Double tyranPercentRemaining);
 	}
 
 	public final void editDungeon(Dungeon c) {
