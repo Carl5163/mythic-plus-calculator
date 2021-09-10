@@ -34,8 +34,10 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 
+@SuppressWarnings("serial")
 public class LoadToonEditor extends Dialog implements KeyNotifier {
 	
+	@SuppressWarnings("unused")
 	private static Logger logger = LoggerFactory.getLogger(LoadToonEditor.class);
 	
 	private static final String[] REGIONS = {
@@ -72,8 +74,10 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 		region.addValueChangeListener(event -> {
 			if (event.getValue() == null) {
 		    } else {
-		    	realm.setItems(REALMS.get(region.getValue()));
-		    	realm.setValue(REALMS.get(region.getValue()).get(0));
+		    	if(event.isFromClient()) {
+			    	realm.setItems(REALMS.get(region.getValue()));
+			    	realm.setValue(REALMS.get(region.getValue()).get(0));
+		    	}
 		    }
 		});
 		
@@ -156,6 +160,7 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 			myUri = builder.buildAndExpand().toUri();
 			response = (JSONObject)(new JSONParser().parse(restTemplate.exchange(myUri, HttpMethod.GET, request, String.class).getBody()));
 			JSONArray realmArray = ((JSONArray)response.get("realms"));
+			@SuppressWarnings("unchecked")
 			Iterator<JSONObject> itr = realmArray.iterator();
 			
 			ArrayList<String> regionList = new ArrayList<String>();
@@ -187,6 +192,15 @@ public class LoadToonEditor extends Dialog implements KeyNotifier {
 	}
 	public String getName() {
 		return name.getValue().trim();
+	}
+	public void setRegion(String rn) {
+		region.setValue(rn);
+	}
+	public void setRealm(String rm) {
+		realm.setValue(rm);
+	}
+	public void setName(String n) {
+		name.setValue(n);
 	}
 	
 	public void addOnLoadListener(ComponentEventListener<ClickEvent<Button>> e) {

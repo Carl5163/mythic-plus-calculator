@@ -20,6 +20,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.data.binder.Binder;
 
+@SuppressWarnings("serial")
 public class DungeonEditor extends Dialog implements KeyNotifier {
 
 	private final DungeonRepository repository;

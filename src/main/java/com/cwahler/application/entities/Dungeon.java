@@ -55,8 +55,8 @@ public class Dungeon {
         fortActual = fortScore;
         tyranActual = tyranScore;
         totalActual = totalScore;
-        fortPercentRemainingActual = fortPercentRemaining;
-        tyranPercentRemainingActual = tyranPercentRemaining;
+        setFortPercentRemainingActual(fortPercentRemaining);
+        setTyranPercentRemainingActual(tyranPercentRemaining);
     }
     
     public void update(double fortPercentRemaining, double tyranPercentRemaining) {
@@ -262,6 +262,22 @@ public class Dungeon {
     public String toString() {
         return this.name;
     }
+
+	public double getFortPercentRemainingActual() {
+		return fortPercentRemainingActual;
+	}
+
+	public void setFortPercentRemainingActual(double fortPercentRemainingActual) {
+		this.fortPercentRemainingActual = fortPercentRemainingActual;
+	}
+
+	public double getTyranPercentRemainingActual() {
+		return tyranPercentRemainingActual;
+	}
+
+	public void setTyranPercentRemainingActual(double tyranPercentRemainingActual) {
+		this.tyranPercentRemainingActual = tyranPercentRemainingActual;
+	}
     
     
 }

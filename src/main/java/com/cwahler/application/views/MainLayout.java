@@ -21,7 +21,6 @@ import com.cwahler.application.repositories.DungeonRepository;
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.Unit;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.Grid.Column;
@@ -32,21 +31,25 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.data.renderer.NumberRenderer;
 import com.vaadin.flow.data.renderer.TemplateRenderer;
 import com.vaadin.flow.function.ValueProvider;
+import com.vaadin.flow.router.BeforeEvent;
+import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.WildcardParameter;
 import com.vaadin.flow.server.PWA;
 import com.vaadin.flow.theme.Theme;
 import com.vaadin.flow.theme.lumo.Lumo;
 
+@SuppressWarnings("serial")
 @PWA(name = "Mythic+ Calculator", shortName = "M+Calc", enableInstallPrompt = false)
 @PageTitle("Mythic+ Calculator")
 @Route(value = "")
 @Theme(value = Lumo.class, variant = Lumo.DARK)
-public class MainLayout extends VerticalLayout {
+
+public class MainLayout extends VerticalLayout implements HasUrlParameter<String> {
 
 	private final DungeonRepository repo;
 
@@ -147,6 +150,26 @@ public class MainLayout extends VerticalLayout {
 		listDungeons(null);
 	}
 	
+	  @Override
+    public void setParameter(BeforeEvent event,
+    		@WildcardParameter String parameter) {
+        if (parameter.isEmpty()) {
+            logger.info("Welcome anonymous.");
+        } else {
+        	String[] params = parameter.split("/");
+        	if(params.length == 3) {
+	        	toonRegion = params[0];
+	        	toonServer = params[1];
+	        	toonName = params[2];
+	        	loadEditor.setRegion(toonRegion);
+	        	loadEditor.setRealm(toonServer);
+	        	loadEditor.setName(toonName);
+	        	loadAll(repo);
+	        	logger.info("Welcome " + toonName + " from (" + toonRegion+ ")" +toonServer);
+        	}
+        }
+    }
+	
 	private TemplateRenderer<Dungeon> getDeltaRendererInt(String prefix, String prop, ValueProvider<Dungeon, Integer> curProv, ValueProvider<Dungeon, Integer> actProv) {
 		TemplateRenderer<Dungeon> ret = null;
 		ret = TemplateRenderer.<Dungeon>of(prefix + "[[item."+prop+"]] <span style=\"color:[[item."+prop+"deltaColor]];\">([[item."+prop+"deltaSign]][[item."+prop+"delta]])</span>")
@@ -183,7 +206,6 @@ public class MainLayout extends VerticalLayout {
 	}
 	
 	private Button createRefreshAllButton(DungeonRepository repo) {
-	    @SuppressWarnings("unchecked")
 	    Button button = new Button("Reload All", VaadinIcon.REFRESH.create(), clickEvent -> {
 	    	if(this.toonName.length() > 0) {
 	    		loadAll(repo);
@@ -194,7 +216,6 @@ public class MainLayout extends VerticalLayout {
 	}
 	
 	private Button createEditButton(Dungeon item) {
-	    @SuppressWarnings("unchecked")
 	    Button button = new Button(VaadinIcon.EDIT.create(), clickEvent -> {
 	        if(item != null) {
 				editor.open(item);
@@ -203,7 +224,6 @@ public class MainLayout extends VerticalLayout {
 	    return button;
 	}
 	private Button createRefreshButton(Dungeon item, DungeonRepository repo) {
-	    @SuppressWarnings("unchecked")
 	    Button button = new Button(VaadinIcon.REFRESH.create(), clickEvent -> {
 	        refreshDungeon(item);
 			repo.save(item);
@@ -309,6 +329,7 @@ public class MainLayout extends VerticalLayout {
 		dungeon.update(fortPercentRemaining, tyranPercentRemaining);
 	}
 	
+	@SuppressWarnings("unchecked")
 	private void refreshDungeon(Dungeon dungeon) {
 		final String bestURI = "https://raider.io/api/v1/characters/profile?region=" + toonRegion + "&realm=" + toonServer + "&name=" + toonName + "&fields=mythic_plus_best_runs";
 		final String altURI = "https://raider.io/api/v1/characters/profile?region=" + toonRegion + "&realm=" + toonServer + "&name=" + toonName + "&fields=mythic_plus_alternate_runs";
