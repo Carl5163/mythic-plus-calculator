@@ -451,7 +451,7 @@ public class MainLayout extends VerticalLayout implements HasUrlParameter<String
 				dungeons.add(d);
 			}
 
-			notification("Refresh Successful!", "success");
+			notification("Load Successful!", "success");
 			
 		} catch (RestClientException e) {
 			notification("Lookup Failed", "error");
