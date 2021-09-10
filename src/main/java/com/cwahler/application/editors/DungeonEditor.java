@@ -87,6 +87,8 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 		fortLevel.addValueChangeListener(e -> {
 			if(fortLevel.isInvalid()) {
 				save.setEnabled(false);
+			} else {
+				save.setEnabled(true);
 			}
 		});
 		tyranLevel.setHasControls(true);
@@ -94,6 +96,8 @@ public class DungeonEditor extends Dialog implements KeyNotifier {
 		tyranLevel.addValueChangeListener(e -> {
 			if(tyranLevel.isInvalid()) {
 				save.setEnabled(false);
+			} else {
+				save.setEnabled(true);
 			}
 		});
 		
